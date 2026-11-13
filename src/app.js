@@ -4,7 +4,11 @@ const $=id=>document.getElementById(id),keys=Object.keys(DEFAULTS),booleans=['nu
 let settings={...DEFAULTS},worker,file,count=0,valid=false,busy=false,previewID=0,timer,url,font,restoring=false;
 try{const saved=JSON.parse(localStorage.getItem('dm-layout-v1')||'{}');for(const k of keys)if(k!=='start'&&k in saved&&typeof saved[k]===typeof DEFAULTS[k])settings[k]=saved[k];}catch{}
 function save(){const {start,...safe}=settings;try{localStorage.setItem('dm-layout-v1',JSON.stringify(safe));}catch{}}
-function showError(message){$('errors').hidden=!message;$('errors').textContent=message||'';}
+function clearPreview(message){
+ $('label-preview').className='label-placeholder';$('label-preview').textContent=message;
+ $('sheet-preview').textContent=message;
+}
+function showError(message){$('errors').hidden=!message;$('errors').textContent=message||'';if(message)clearPreview('Предпросмотр недоступен. Проверьте параметры.');}
 function clearResult(){if(url)URL.revokeObjectURL(url);url=null;$('result').hidden=true;$('result').replaceChildren();}
 function paintInputs(){for(const k of keys){const el=$(k);if(!el||k==='mode')continue;if(booleans.includes(k))el.checked=settings[k];else el.value=settings[k];}}
 function controls(){
@@ -30,6 +34,7 @@ function summary(){
 function requestPreview(){
  valid=false;clearResult();controls();previewID++;clearTimeout(timer);
  if(!count)return;
+ clearPreview('Обновление предпросмотра…');
  try{summary();}catch(e){showError(e.message);return;}
  showError('');const id=previewID;
  timer=setTimeout(()=>worker.postMessage({type:'preview',id,settings,index:Math.min(count-1,Math.max(0,+$('row').value-1)),from:+$('from').value,to:+$('to').value}),150);

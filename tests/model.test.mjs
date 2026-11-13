@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {parseInput,DEFAULTS as D,layout,rangeOf,numberFor,digitsFor} from '../src/model.js';
+import {parseInput,DEFAULTS as D,layout,rangeOf,numberFor,digitsFor,MM} from '../src/model.js';
 const code=i=>`010460123456789021${String(i).padStart(6,'0')}\x1d93aB;\",^`;
 const parse=s=>parseInput(new TextEncoder().encode(s));
 test('punctuation and byte separator remain data',()=>{let c=code(1);let r=parse(c+'\r\n'+code(2)+'\r\n');assert.equal(r.errorCount,0);assert.equal(r.codes[0],c);assert.equal(r.count,2);});
@@ -15,3 +15,25 @@ test('number-free code is centered both ways',()=>{let g=layout({...D,number:fal
 test('rounded border and edge thickness remain within label',()=>{assert.throws(()=>layout({...D,rounded:true,radius:20},26));assert.throws(()=>layout({...D,stroke:10,inset:12},26));});
 
 test('border stroke cannot be clipped by page edge',()=>{assert.throws(()=>layout({...D,inset:0},26),/край холста/);});
+
+test('number ink is centered between matrix and border, above and below',()=>{
+ for(const position of ['top','bottom'])for(const font of [3,5,7,12]){
+  const g=layout({...D,position,font},22);
+  assert.ok(Math.abs((g.numberTop+g.numberBottom)/2-(g.bandTop+g.bandBottom)/2)<1e-10);
+  assert.ok(g.numberTop-g.bandTop>=g.quiet-1e-9);
+  assert.ok(g.bandBottom-g.numberBottom>=g.quiet-1e-9);
+ }
+});
+test('compact screenshot layout fits without shrinking the 15mm code',()=>{
+ const s={...D,width:20,height:20,side:15,font:5,inset:.6};
+ for(const modules of [20,22,26]){
+  const g=layout(s,modules);
+  assert.ok(g.y>=s.inset+s.stroke/MM/2+g.quiet-1e-9);
+  assert.ok(Math.abs((g.numberTop-g.bandTop)-(g.bandBottom-g.numberBottom))<1e-10);
+ }
+});
+test('top and bottom layouts are mirror images',()=>{
+ const a=layout(D,22),b=layout({...D,position:'top'},22);
+ assert.ok(Math.abs(a.y+b.y+D.side-D.height)<1e-10);
+ assert.ok(Math.abs(a.numberTop+b.numberBottom-D.height)<1e-10);
+});

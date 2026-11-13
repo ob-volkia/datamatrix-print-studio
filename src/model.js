@@ -1,3 +1,4 @@
+import fontMetrics from './fontmetrics.js';
 export const DEFAULTS = Object.freeze({width:25,height:25,side:15,font:7,number:true,position:'bottom',start:1,digits:0,frame:true,stroke:.4,inset:1,rounded:false,radius:1.3,mode:'label',margin:5,gap:2});
 export const MM=72/25.4;
 export function parseInput(buffer) {
@@ -45,18 +46,28 @@ export function layout(s,modules=26,lastNumber='00001'){
  const available=edge+curve;
  if(s.frame&&(s.inset*2+stroke>=Math.min(s.width,s.height)))throw Error('Рамка не помещается на холсте.');
  if(s.frame&&s.rounded&&s.radius*2>Math.min(s.width,s.height)-2*s.inset)throw Error('Радиус скругления слишком большой для рамки.');
- const fontMm=s.font/MM,inkH=fontMm*.73;
- const groupHeight=s.side+quiet*2+(s.number?1+inkH:0);
+ const fontMm=s.font/MM;
+ const inkH=fontMm*(fontMetrics.digitAscent+fontMetrics.digitDescent);
  const numWidth=lastNumber.length*fontMm*.557;
- if(s.side+2*quiet> s.width-2*available||groupHeight>s.height-2*available||s.number&&numWidth>s.width-2*available)
+ if(s.side+2*quiet> s.width-2*available||s.side+2*quiet>s.height-2*available||s.number&&numWidth>s.width-2*available)
   throw Error('Код, номер и защитные отступы не помещаются. Увеличьте холст или уменьшите код / шрифт.');
- const top=(s.height-groupHeight)/2;
- const codeY=top+quiet+(s.number&&s.position==='top'?inkH+1:0);
- const baseline=s.position==='top'?top+inkH:codeY+s.side+quiet+1+inkH;
+ // Reserve room for the number, keeping the matrix inside its quiet zone.
+ const minY=available+quiet,maxY=s.height-available-quiet-s.side;
+ const preferred=(s.height-s.side-(s.number?inkH+quiet:0))/2;
+ const bottomCodeY=Math.max(minY,Math.min(maxY,preferred));
+ const codeY=s.number?(s.position==='top'?s.height-s.side-bottomCodeY:bottomCodeY):(s.height-s.side)/2;
+ // Center the actual digit ink, not the font line box, between code and border.
+ const bandTop=s.position==='top'?available:codeY+s.side;
+ const bandBottom=s.position==='top'?codeY:s.height-available;
+ const numberCenter=(bandTop+bandBottom)/2;
+ const numberTop=numberCenter-inkH/2,numberBottom=numberCenter+inkH/2;
+ if(s.number&&(numberTop<bandTop+quiet-1e-9||numberBottom>bandBottom-quiet+1e-9))
+  throw Error('Код, номер и защитные отступы не помещаются. Увеличьте холст или уменьшите код / шрифт.');
+ const baseline=numberCenter+fontMm*(fontMetrics.digitAscent-fontMetrics.digitDescent)/2;
  const columns=Math.floor((210-2*s.margin+s.gap)/(s.width+s.gap));
  const rows=Math.floor((297-2*s.margin+s.gap)/(s.height+s.gap));
  if(s.mode==='a4'&&(columns<1||rows<1))throw Error('Этикетка не помещается на А4 с заданными полями.');
- return {x:(s.width-s.side)/2,y:codeY,quiet,baseline,columns,rows,perPage:s.mode==='a4'?columns*rows:1};
+ return {x:(s.width-s.side)/2,y:codeY,quiet,baseline,numberTop,numberBottom,bandTop,bandBottom,columns,rows,perPage:s.mode==='a4'?columns*rows:1};
 }
 export function rangeOf(from,to,count){
  if(!Number.isInteger(from)||!Number.isInteger(to)||from<1||to<from||to>count)throw Error('Диапазон должен быть в пределах файла: от 1 до '+count+'.');
