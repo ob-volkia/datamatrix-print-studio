@@ -46,7 +46,7 @@ test('aspect lock preserves current ratio in either direction',()=>{
  assert.equal(a.side,s.side);
 });
 test('unlocked canvas dimensions remain independent',()=>{
- assert.equal(resizeCanvas({...D,width:30,height:20},'width',45).height,20);
+ assert.equal(resizeCanvas({...D,width:30,height:20,lockAspect:false},'width',45).height,20);
 });
 test('aspect lock tolerates an empty edit and does not silently clamp dimensions',()=>{
  const s={...D,width:30,height:20,lockAspect:true};
