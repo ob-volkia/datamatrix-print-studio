@@ -1,3 +1,4 @@
+import {icon,mountIcons,syncAspectButton} from './icons.js';
 import {DEFAULTS,MM,layout,numberFor,rangeOf,resizeCanvas} from './model.js';
 import {svgPath} from './barcode.js';
 const $=id=>document.getElementById(id),keys=Object.keys(DEFAULTS),booleans=['number','frame','rounded','lockAspect'];
@@ -11,16 +12,17 @@ function clearPreview(message){
 }
 function showError(message){$('errors').hidden=!message;$('errors').textContent=message||'';if(message)clearPreview('Предпросмотр недоступен. Проверьте параметры.');}
 function clearResult(){if(url)URL.revokeObjectURL(url);url=null;$('result').hidden=true;$('result').replaceChildren();}
-function paintInputs(){for(const k of keys){const el=$(k);if(!el||k==='mode')continue;if(booleans.includes(k))el.checked=settings[k];else el.value=settings[k];}}
+function paintInputs(){for(const k of keys){const el=$(k);if(!el||k==='mode'||k==='lockAspect')continue;if(booleans.includes(k))el.checked=settings[k];else el.value=settings[k];}}
 function controls(){
  $('a4-settings').hidden=settings.mode!=='a4';$('sheet-card').hidden=settings.mode!=='a4';$('previews').classList.toggle('a4',settings.mode==='a4');
  $('number-settings').hidden=!settings.number;$('frame-settings').hidden=!settings.frame;$('radius-field').hidden=!settings.rounded;$('round-hint').hidden=!(settings.rounded&&!settings.frame);
  for(const b of document.querySelectorAll('[data-mode]')){b.classList.toggle('active',b.dataset.mode===settings.mode);b.disabled=busy;}
  for(const k of keys){if($(k)&&k!=='mode')$(k).disabled=busy;}
- $('file').disabled=busy;$('reset').disabled=busy;$('all').disabled=busy||!count;
+ $('file').disabled=busy;$('choose-file').disabled=busy;$('reset').disabled=busy;$('all').disabled=busy||!count;
  $('from').disabled=$('to').disabled=busy||!count||$('all').checked;
  $('row').disabled=busy||!count;$('previous').disabled=$('next').disabled=busy||!count;
  $('export').disabled=busy||!valid||!count||!font;
+ syncAspectButton($('lockAspect'),settings.lockAspect);
  $('label-size').textContent=`${settings.width} × ${settings.height} мм`;$('code-size').textContent=`Код ${settings.side} × ${settings.side} мм`;
 }
 function summary(){
@@ -68,7 +70,7 @@ function startWorker(){
    $('progress').value=m.current/m.total*100;$('progress-text').textContent=`Сгенерировано ${m.current.toLocaleString('ru-RU')} из ${m.total.toLocaleString('ru-RU')} · ${Math.round(m.current/m.total*100)}%`;
   }else if(m.type==='done'){
    busy=false;$('progress-panel').hidden=true;url=URL.createObjectURL(m.blob);
-   const a=document.createElement('a');a.href=url;a.download=`${file.name.replace(/\.csv$/i,'')}_${$('from').value}-${$('to').value}_${settings.mode}.pdf`;a.textContent='Скачать PDF ↓';
+   const a=document.createElement('a');a.href=url;a.download=`${file.name.replace(/\.csv$/i,'')}_${$('from').value}-${$('to').value}_${settings.mode}.pdf`;a.append(icon('download'),document.createTextNode('Скачать PDF'));
    $('result').hidden=false;$('result').textContent=`PDF готов · ${m.blob.size<1048576?Math.ceil(m.blob.size/1024)+' КБ':(m.blob.size/1024/1024).toLocaleString('ru-RU',{maximumFractionDigits:1})+' МБ'}`;$('result').append(a);controls();a.click();
   }else if(m.type==='error'&&(m.id==null||m.id===previewID)){
    busy=false;valid=false;$('progress-panel').hidden=true;showError(m.message);controls();
@@ -85,7 +87,7 @@ function loadFile(f){
  worker.postMessage({type:'load',file:f});
 }
 for(const k of keys){
- const el=$(k);if(!el||k==='mode')continue;
+ const el=$(k);if(!el||k==='mode'||k==='lockAspect')continue;
  const update=()=>{
   const value=booleans.includes(k)?el.checked:['position'].includes(k)?el.value:Number(el.value);
   if(k==='width'||k==='height'){
@@ -97,7 +99,9 @@ for(const k of keys){
  };
  el.addEventListener('change',update);if(el.type==='number')el.addEventListener('input',update);
 }
+$('lockAspect').onclick=()=>{settings.lockAspect=!settings.lockAspect;if(settings.lockAspect)aspectRatio=settings.width/settings.height;save();requestPreview();controls();};
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{settings.mode=b.dataset.mode;save();requestPreview();controls();};
+$('choose-file').onclick=()=>$('file').click();
 $('file').onchange=e=>{loadFile(e.target.files[0]);e.target.value='';};
 for(const type of ['dragover','dragenter'])$('dropzone').addEventListener(type,e=>{e.preventDefault();if(!busy)$('dropzone').classList.add('drag');});
 for(const type of ['dragleave','drop'])$('dropzone').addEventListener(type,e=>{e.preventDefault();$('dropzone').classList.remove('drag');if(type==='drop')loadFile(e.dataTransfer.files[0]);});
@@ -118,5 +122,5 @@ $('cancel').onclick=()=>{
  startWorker();if(file){restoring=true;busy=true;controls();worker.postMessage({type:'load',file});}
 };
 window.addEventListener('beforeunload',()=>{if(url)URL.revokeObjectURL(url);worker.terminate();});
-startWorker();paintInputs();controls();
+mountIcons();startWorker();paintInputs();controls();
 fetch(new URL('../fonts/LiberationSans-Bold.ttf',import.meta.url)).then(r=>{if(!r.ok)throw Error();return r.arrayBuffer();}).then(b=>{font=b;controls();}).catch(()=>showError('Не удалось загрузить встроенный шрифт приложения. Обновите страницу.'));

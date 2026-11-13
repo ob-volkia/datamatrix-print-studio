@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "bwip-js": "4.11.1",
-    "fflate": "^0.8.2"
+    "fflate": "^0.8.2",
+    "lucide": "1.72.0"
   },
   "devDependencies": {
     "esbuild": "0.25.12"
