@@ -1,5 +1,5 @@
 import fontMetrics from './fontmetrics.js';
-export const DEFAULTS = Object.freeze({width:25,height:25,side:15,font:7,number:true,position:'bottom',start:1,digits:0,frame:true,stroke:.4,inset:1,rounded:false,radius:1.3,mode:'label',margin:5,gap:2});
+export const DEFAULTS = Object.freeze({width:25,height:25,lockAspect:false,side:15,font:7,number:true,position:'bottom',start:1,digits:0,frame:true,stroke:.4,inset:1,rounded:false,radius:1.3,mode:'label',margin:5,gap:2});
 export const MM=72/25.4;
 export function parseInput(buffer) {
  const bytes=new Uint8Array(buffer);let offset=0;
@@ -72,4 +72,13 @@ export function layout(s,modules=26,lastNumber='00001'){
 export function rangeOf(from,to,count){
  if(!Number.isInteger(from)||!Number.isInteger(to)||from<1||to<from||to>count)throw Error('Диапазон должен быть в пределах файла: от 1 до '+count+'.');
  return {from:from-1,to,count:to-from+1};
+}
+
+export function resizeCanvas(s,dimension,value,ratio=s.width/s.height){
+ const next={...s,[dimension]:value};
+ if(s.lockAspect&&['width','height'].includes(dimension)&&value>0&&Number.isFinite(value)&&Number.isFinite(ratio)&&ratio>0){
+  const other=dimension==='width'?'height':'width';
+  next[other]=Math.round((dimension==='width'?value/ratio:value*ratio)*1000)/1000;
+ }
+ return next;
 }

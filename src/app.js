@@ -1,8 +1,9 @@
-import {DEFAULTS,MM,layout,numberFor,rangeOf} from './model.js';
+import {DEFAULTS,MM,layout,numberFor,rangeOf,resizeCanvas} from './model.js';
 import {svgPath} from './barcode.js';
-const $=id=>document.getElementById(id),keys=Object.keys(DEFAULTS),booleans=['number','frame','rounded'];
+const $=id=>document.getElementById(id),keys=Object.keys(DEFAULTS),booleans=['number','frame','rounded','lockAspect'];
 let settings={...DEFAULTS},worker,file,count=0,valid=false,busy=false,previewID=0,timer,url,font,restoring=false;
 try{const saved=JSON.parse(localStorage.getItem('dm-layout-v1')||'{}');for(const k of keys)if(k!=='start'&&k in saved&&typeof saved[k]===typeof DEFAULTS[k])settings[k]=saved[k];}catch{}
+let aspectRatio=settings.width/settings.height;
 function save(){const {start,...safe}=settings;try{localStorage.setItem('dm-layout-v1',JSON.stringify(safe));}catch{}}
 function clearPreview(message){
  $('label-preview').className='label-placeholder';$('label-preview').textContent=message;
@@ -85,7 +86,15 @@ function loadFile(f){
 }
 for(const k of keys){
  const el=$(k);if(!el||k==='mode')continue;
- const update=()=>{settings[k]=booleans.includes(k)?el.checked:['position'].includes(k)?el.value:Number(el.value);save();requestPreview();controls();};
+ const update=()=>{
+  const value=booleans.includes(k)?el.checked:['position'].includes(k)?el.value:Number(el.value);
+  if(k==='width'||k==='height'){
+   settings=resizeCanvas(settings,k,value,aspectRatio);
+   const other=k==='width'?'height':'width';$(other).value=settings[other];
+  }else settings[k]=value;
+  if(k==='lockAspect'&&value)aspectRatio=settings.width/settings.height;
+  save();requestPreview();controls();
+ };
  el.addEventListener('change',update);if(el.type==='number')el.addEventListener('input',update);
 }
 for(const b of document.querySelectorAll('[data-mode]'))b.onclick=()=>{settings.mode=b.dataset.mode;save();requestPreview();controls();};
@@ -97,7 +106,7 @@ $('previous').onclick=()=>{if(+$('row').value>1){$('row').value--;requestPreview
 $('next').onclick=()=>{if(+$('row').value<count){$('row').value++;requestPreview();}};
 for(const id of ['from','to']){$(id).onchange=requestPreview;$(id).oninput=requestPreview;}
 $('all').onchange=()=>{if($('all').checked){$('from').value=1;$('to').value=count;}requestPreview();controls();};
-$('reset').onclick=()=>{settings={...DEFAULTS};save();paintInputs();requestPreview();controls();};
+$('reset').onclick=()=>{settings={...DEFAULTS};aspectRatio=1;save();paintInputs();requestPreview();controls();};
 $('export').onclick=async()=>{
  try{summary();if(!valid||busy||!font)return;clearResult();showError('');busy=true;controls();$('progress-panel').hidden=false;$('progress').value=0;$('progress-text').textContent='Подготовка PDF…';
   worker.postMessage({type:'generate',settings,from:+$('from').value,to:+$('to').value,font});

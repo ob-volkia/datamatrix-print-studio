@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {parseInput,DEFAULTS as D,layout,rangeOf,numberFor,digitsFor,MM} from '../src/model.js';
+import {parseInput,DEFAULTS as D,layout,rangeOf,numberFor,digitsFor,MM,resizeCanvas} from '../src/model.js';
 const code=i=>`010460123456789021${String(i).padStart(6,'0')}\x1d93aB;\",^`;
 const parse=s=>parseInput(new TextEncoder().encode(s));
 test('punctuation and byte separator remain data',()=>{let c=code(1);let r=parse(c+'\r\n'+code(2)+'\r\n');assert.equal(r.errorCount,0);assert.equal(r.codes[0],c);assert.equal(r.count,2);});
@@ -36,4 +36,20 @@ test('top and bottom layouts are mirror images',()=>{
  const a=layout(D,22),b=layout({...D,position:'top'},22);
  assert.ok(Math.abs(a.y+b.y+D.side-D.height)<1e-10);
  assert.ok(Math.abs(a.numberTop+b.numberBottom-D.height)<1e-10);
+});
+
+
+test('aspect lock preserves current ratio in either direction',()=>{
+ const s={...D,width:30,height:20,lockAspect:true};
+ let a=resizeCanvas(s,'width',45,1.5);assert.equal(a.height,30);
+ a=resizeCanvas(a,'height',24,1.5);assert.equal(a.width,36);
+ assert.equal(a.side,s.side);
+});
+test('unlocked canvas dimensions remain independent',()=>{
+ assert.equal(resizeCanvas({...D,width:30,height:20},'width',45).height,20);
+});
+test('aspect lock tolerates an empty edit and does not silently clamp dimensions',()=>{
+ const s={...D,width:30,height:20,lockAspect:true};
+ assert.equal(resizeCanvas(s,'width',0,1.5).height,20);
+ const a=resizeCanvas(s,'height',1000,1.5);assert.equal(a.width,1500);assert.throws(()=>layout(a));
 });
