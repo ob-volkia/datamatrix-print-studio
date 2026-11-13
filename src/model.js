@@ -1,5 +1,5 @@
 import fontMetrics from './fontmetrics.js';
-export const DEFAULTS = Object.freeze({width:25,height:25,lockAspect:true,side:15,font:7,number:true,position:'bottom',start:1,digits:0,frame:true,stroke:.4,inset:1,rounded:false,radius:1.3,mode:'label',margin:5,gap:2});
+export const DEFAULTS = Object.freeze({width:20,height:20,lockAspect:false,side:15,font:5,number:true,position:'bottom',start:1,digits:0,frame:false,stroke:.4,inset:1,rounded:false,radius:1.3,mode:'label',margin:5,gap:2});
 export const MM=72/25.4;
 export function parseInput(buffer) {
  const bytes=new Uint8Array(buffer);let offset=0;
